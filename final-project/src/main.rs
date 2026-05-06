@@ -101,6 +101,7 @@ struct Summary {
     avg_worker_utilization: f64,
     avg_cpu_usage: f64,
     max_queue_len: usize,
+    total_runtime_ms: u128,
 }
 
 fn main() {
@@ -380,6 +381,7 @@ fn run_simulation(
 
     monitor_running.store(false, Ordering::SeqCst); // telling monitor thread to stop
     monitor_handle.join().unwrap(); // waiting for monitor thread to finish
+    let total_runtime = simulation_start.elapsed(); // total runtime
 
     // building and returning experiment summary
     build_summary(
@@ -388,6 +390,7 @@ fn run_simulation(
         completed_tasks,
         shared_metrics,
         simulation_start.elapsed(),
+        total_runtime,
     )
 }
 
@@ -481,6 +484,7 @@ fn build_summary(
     completed_tasks: Vec<CompletedTask>,
     shared_metrics: Arc<Mutex<SharedMetrics>>,
     makespan: Duration,
+    total_runtime: Duration,
 ) -> Summary {
     // total # of completed tasks
     let total_completed = completed_tasks.len();
@@ -560,6 +564,7 @@ fn build_summary(
         avg_worker_utilization: (avg_active_workers / WORKER_COUNT as f64) * 100.0, // worker working %
         avg_cpu_usage,
         max_queue_len: metrics.max_queue_len,
+        total_runtime_ms: total_runtime.as_millis(),
     }
 }
 
@@ -598,6 +603,11 @@ fn print_summary(summary: &Summary) {
     println!(
         "makespan                : {} ms",
         summary.makespan_ms
+    );
+
+    println!(
+        "total runtime           : {} ms",
+        summary.total_runtime_ms
     );
 
     println!(
